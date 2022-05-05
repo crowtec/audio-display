@@ -24,7 +24,7 @@ import os
 from PIL import Image
 from PIL import ImageDraw
 
-import wavfile
+from . import wavfile
 
 __all__ = []
 __version__ = 0.5
