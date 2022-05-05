@@ -47,6 +47,7 @@ class SpectrumWriter(object):
         self.silence_ceiling = opts.silence_ceiling
 
         self.output_filename_mask = opts.output_filename_mask
+        np.seterr(divide='ignore') 
 
     def write_bar(self, bucket_start, line_data):
         raise NotImplementedError
