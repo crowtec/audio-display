@@ -24,7 +24,7 @@ import os
 from PIL import Image
 from PIL import ImageDraw
 
-from . import wavfile
+import wavfile
 
 __all__ = []
 __version__ = 0.5
@@ -253,7 +253,7 @@ def main(argv=None):
         # write spectrum to file
         writer.write_spectrum(frequencies, spectrum, frame_index)
 
-        frame_start += byte_per_frame
+        frame_start += int(byte_per_frame)
         frame_index += 1
         previous_spectrum = spectrum
 
