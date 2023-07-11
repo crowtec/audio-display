@@ -185,12 +185,12 @@ def main(argv=None):
                             help="max frequency in input audio")
         parser.add_argument("--silence-ceiling", dest="silence_ceiling", default=70, type=float,
                             help="opposite of threshold considered silence [in dB, default: %(default)s]")
-
+        parser.add_argument("--n-cpus", dest="cpus_to_use", default=1, type=int,
+                            help="number of cpus to use for wave generation")
         parser.add_argument("-i", dest="input_filename", default="input.wav", help="input file in wav format")
         parser.add_argument("-o", dest="output_filename_mask", required=True,
                             help="output filename mask (should contain {:06} or similar to generate sequence)")
-        parser.add_argument("--n-cpus", dest="cpus_to_use", default=1, type=int,
-                            help="number of cpus to use for wave generation")
+
 
         # process options
         opts = parser.parse_args(argv)
