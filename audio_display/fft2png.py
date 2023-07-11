@@ -23,6 +23,7 @@ import numpy as np
 import os
 from PIL import Image
 from PIL import ImageDraw
+from multiprocessing import Process
 
 from . import wavfile
 
@@ -188,6 +189,8 @@ def main(argv=None):
         parser.add_argument("-i", dest="input_filename", default="input.wav", help="input file in wav format")
         parser.add_argument("-o", dest="output_filename_mask", required=True,
                             help="output filename mask (should contain {:06} or similar to generate sequence)")
+        parser.add_argument("--n-cpus", dest="cpus_to_use", default=1, type=int,
+                            help="number of cpus to use for wave generation")
 
         # process options
         opts = parser.parse_args(argv)
@@ -229,20 +232,37 @@ def main(argv=None):
 
     byte_per_frame = fs / opts.target_fps
 
-    frame_start = 0
-    frame_index = 0
-    previous_spectrum = None
-
     frame_index_max = math.ceil(len(normalized_data) / byte_per_frame)
+    frame_index_slice = math.floor(frame_index_max / opts.cpus_to_use)
+    frame_index_module = frame_index_max % opts.cpus_to_use
 
+    proc_list = []
+    for i in range(opts.cpus_to_use):
+        frame_i = i * frame_index_slice
+        frame_j = (i + 1) * frame_index_slice
+
+        last_slice = i == range(opts.cpus_to_use)[-1]
+        # Add the frames that did not fit in any slice to the last slice
+        frame_j = frame_j + frame_index_module if last_slice else frame_j
+
+        p = Process(target=generate_waves, args=(normalized_data, byte_per_frame, frame_i, frame_j, fs, opts, last_slice))
+        p.start()
+        proc_list.append(p)
+
+    for p in proc_list:
+        p.join()
+
+def generate_waves(normalized_data, byte_per_frame, frame_index, frame_index_max, fs, opts, verbose):
+    previous_spectrum = None
+    frame_init = frame_index
     writer = RENDERERS[opts.renderer](opts)
 
-    while frame_start < len(normalized_data):
-        # rms = np.sqrt(np.mean(np.square(normalized_data[frame_start: frame_start + 4096])))
-
-        print("{0:6}/{1:6}".format(frame_index, frame_index_max), end="\r")
+    while frame_index < frame_index_max:
+        if verbose:
+            print("{0:6}/{1:6}".format(frame_index - frame_init, frame_index_max - frame_init), end="\r")
 
         # compute the raw spectrum
+        frame_start = frame_index * int(byte_per_frame)
         spectrum = abs(np.fft.rfft(normalized_data[frame_start:frame_start + opts.fft_window]))
 
         # smooth it over time
@@ -254,7 +274,6 @@ def main(argv=None):
         # write spectrum to file
         writer.write_spectrum(frequencies, spectrum, frame_index)
 
-        frame_start += int(byte_per_frame)
         frame_index += 1
         previous_spectrum = spectrum
 
